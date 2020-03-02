@@ -9,7 +9,7 @@ namespace AzureSearchTest
     {
         static void Main(string[] args)
         {
-            SearchIndexClient indexClient = new SearchIndexClient("adenin-intents", "utterances", new SearchCredentials("INDEX_QUERY_KEY"));
+            SearchIndexClient indexClient = new SearchIndexClient("adenin-intents", "utterances", new SearchCredentials(args[0]));
 
             SearchParameters parameters = new SearchParameters
             {
