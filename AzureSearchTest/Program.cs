@@ -109,9 +109,9 @@ namespace AzureSearchTest
                         Console.WriteLine(diff);
                     }
 
-                    Console.WriteLine("\nDifference between first and second diff:\n");
+                    Console.WriteLine("\nDifference between first and second search result sets:\n");
 
-                    var difference3 = difference.Except(difference2);
+                    var difference3 = resultIds.Except(resultIds2);
 
                     foreach (var diff in difference3)
                     {
