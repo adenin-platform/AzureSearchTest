@@ -29,7 +29,7 @@ namespace AzureSearchTest
                 QueryType = QueryType.Full
             };
 
-            bool retry = true;
+            var retry = true;
 
             while (retry)
             {
@@ -44,8 +44,10 @@ namespace AzureSearchTest
                 var deduplicatedCount = 0;
                 var hadMismatch = false;
 
-                // Repeat the attempt 5 times
-                for (int i = 0; i < 50; i++)
+                IEnumerable<SearchResult<Utterance>> lastResults = new List<SearchResult<Utterance>>();
+
+                // Repeat the attempt
+                for (int i = 0; i < 5; i++)
                 {
                     var searchResult = await indexClient.Documents.SearchAsync<Utterance>(searchText, parameters);
                     var results = searchResult.Results as IEnumerable<SearchResult<Utterance>>;
@@ -56,7 +58,7 @@ namespace AzureSearchTest
                         results = results.Concat(searchResult.Results);
                     }
 
-                    Console.WriteLine($"{i + 1}: raw results count: {results.Count()}");
+                    Console.WriteLine($"\n{i + 1}: raw results count: {results.Count()}");
 
                     var deduplicatedResults = new List<Utterance>();
 
@@ -81,18 +83,47 @@ namespace AzureSearchTest
                         statement = "Initial";
                     }
 
+                    var currentMismatch = false;
+
                     if (count != results.Count())
                     {
                         hadMismatch = true;
+                        currentMismatch = true;
                         Console.WriteLine($"{i + 1}: count mismatch. {statement}: {count}, current: {results.Count()}");
                     }
 
                     if (deduplicatedCount != deduplicatedResults.Count())
                     {
                         hadMismatch = true;
+                        currentMismatch = true;
                         Console.WriteLine($"{i + 1}: deduplicated count mismatch. {statement}: {deduplicatedCount}, current: {deduplicatedResults.Count()}");
                     }
 
+                    if (currentMismatch && i > 0)
+                    {
+                        var currentIds = results.Select(r => r.Document.Id);
+                        var previousIds = lastResults.Select(r => r.Document.Id);
+
+                        var difference = currentIds.Except(previousIds).ToList();
+
+                        difference.Sort();
+
+                        if (difference.Count() > 0)
+                        {
+                            Console.WriteLine($"{i + 1}: The following IDs were not present in both the current and previous results list:");
+
+                            foreach (var intentId in difference)
+                            {
+                                Console.WriteLine($"\t{intentId}");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"{i + 1}: No difference was found in the set of IntentIds between this and the previous iteration");
+                        }
+                    }
+
+                    lastResults = results;
                     count = results.Count();
                     deduplicatedCount = deduplicatedResults.Count();
                 }
