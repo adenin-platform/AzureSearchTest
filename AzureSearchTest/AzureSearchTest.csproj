@@ -9,4 +9,10 @@
     <PackageReference Include="Microsoft.Azure.Search" Version="10.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="tenant916_utterances.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

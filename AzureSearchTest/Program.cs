@@ -3,6 +3,7 @@ using Microsoft.Azure.Search;
 using Microsoft.Azure.Search.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -28,6 +29,98 @@ namespace AzureSearchTest
                 SearchMode = SearchMode.All,
                 QueryType = QueryType.Full
             };
+
+            Console.WriteLine("Run utterance comparison test? (y/n)");
+
+            var runTest = Console.ReadLine();
+
+            if (runTest == "y")
+            {
+                var utterances = (await File.ReadAllTextAsync("tenant916_utterances.txt")).Split('\n');
+                var count = 1;
+
+                Console.WriteLine($"Doing single searches for each of {utterances.Length - 1} IDs in file");
+
+                foreach (var utterance in utterances)
+                {
+                    if (string.IsNullOrEmpty(utterance)) continue;
+
+                    Console.WriteLine($"Searching for utterance {count++} '{utterance}'...");
+
+                    var singleResult = await indexClient.Documents.SearchAsync<Utterance>($"id:{utterance}", parameters);
+
+                    if (singleResult.Results.Count(r => r.Document.Id == utterance) == 0)
+                    {
+                        Console.WriteLine($"Utterance '{utterance}' from file was not returned from index search");
+                    }
+                }
+
+                Console.WriteLine($"\nFetching all results from index at once with continuation token\n");
+
+                var searchResult = await indexClient.Documents.SearchAsync<Utterance>("tenantId:916", parameters);
+
+                var results = searchResult.Results as IEnumerable<SearchResult<Utterance>>;
+
+                while (searchResult.ContinuationToken != null)
+                {
+                    searchResult = await indexClient.Documents.ContinueSearchAsync<Utterance>(searchResult.ContinuationToken);
+                    results = results.Concat(searchResult.Results);
+                }
+
+                Console.WriteLine($"Full search total count: {results.Count()}");
+
+                if (results.Count() != utterances.Count())
+                {
+                    var resultIds = results.Select(r => r.Document.Id);
+                    var difference = utterances.Except(resultIds);
+
+                    Console.WriteLine($"Difference count: {difference.Count()}\n");
+
+                    Console.WriteLine("Differing IDs:\n");
+
+                    foreach (var diff in difference)
+                    {
+                        Console.WriteLine(diff);
+                    }
+
+                    Console.WriteLine($"\nFetching all results from index at once with continuation for second time\n");
+
+                    var searchResult2 = await indexClient.Documents.SearchAsync<Utterance>("tenantId:916", parameters);
+                    var results2 = searchResult.Results as IEnumerable<SearchResult<Utterance>>;
+
+                    while (searchResult2.ContinuationToken != null)
+                    {
+                        searchResult2 = await indexClient.Documents.ContinueSearchAsync<Utterance>(searchResult2.ContinuationToken);
+                        results2 = results2.Concat(searchResult2.Results);
+                    }
+
+                    var resultIds2 = results2.Select(r => r.Document.Id);
+
+                    Console.WriteLine($"Total count second attempt: {results2.Count()}");
+
+                    var difference2 = utterances.Except(resultIds2);
+
+                    Console.WriteLine($"Difference count with second attempt: {difference2.Count()}");
+
+                    Console.WriteLine("Differing IDs:\n");
+
+                    foreach (var diff in difference2)
+                    {
+                        Console.WriteLine(diff);
+                    }
+
+                    Console.WriteLine("\nDifference between first and second diff:\n");
+
+                    var difference3 = difference.Except(difference2);
+
+                    foreach (var diff in difference3)
+                    {
+                        Console.WriteLine(diff);
+                    }
+                }
+
+                return;
+            }
 
             var retry = true;
 
@@ -106,11 +199,11 @@ namespace AzureSearchTest
 
                         var difference = currentIds.Except(previousIds).ToList();
 
-                        difference.Sort();
+                        //difference.Sort();
 
                         if (difference.Count() > 0)
                         {
-                            Console.WriteLine($"{i + 1}: The following IDs were not present in both the current and previous results list:");
+                            Console.WriteLine($"{i + 1}: The following IDs were not present in both the current and previous results list. Total count: {difference.Count()}");
 
                             foreach (var intentId in difference)
                             {
