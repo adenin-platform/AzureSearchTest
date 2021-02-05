@@ -19,58 +19,35 @@ namespace AzureSearchTest
             var parameters = new SearchParameters
             {
                 SearchMode = SearchMode.All,
-                QueryType = QueryType.Full,
+                QueryType = QueryType.Full,                
                 Top = 1000,
                 Skip = 0
-            };
+            };                       
 
-            //var utterances = File.ReadAllLines("tenant916_utterances.txt");
-            //var count = 0;
-
-            //Console.WriteLine($"Doing single searches for each of {utterances.Length} IDs in file tenant916_utterances.txt");
-
-            //foreach (var utterance in utterances)
-            //{
-            //    var singleResult = await indexClient.Documents.SearchAsync<Utterance>($"id:{utterance}", parameters);
-
-            //    if (singleResult.Results.Count(r => r.Document.Id == utterance) == 1)
-            //    {
-            //        count++;
-            //    }
-            //    else
-            //    {
-            //        Console.WriteLine($"ERROR: Utterance '{utterance}' from file was not returned from index search");
-            //    }
-            //}
-
-            //if (count == utterances.Length)
-            //{
-            //    Console.WriteLine($"Found all {count} utterances from file with index search");
-            //}
-            //else
-            //{
-            //    Console.WriteLine($"ERROR: {utterances.Length - count} utterances from file was not returned from index search");
-            //}
-
-            Console.WriteLine($"\nFetching all results from index \n");
+            // get first results
             var searchResult1 = await indexClient.Documents.SearchAsync<Utterance>("tenantId:214", parameters);
             var results1 = searchResult1.Results as IEnumerable<SearchResult<Utterance>>;
-            var resultIds1 = results1.Select(r => r.Document.Id);
+            var scores1 = results1.Select(r => r.Document.Id); // r.Score.ToString());
 
             for (int i = 0; i < 100; i++)
             {
                 var searchResult2 = await indexClient.Documents.SearchAsync<Utterance>("tenantId:214", parameters);
                 var results2 = searchResult2.Results as IEnumerable<SearchResult<Utterance>>;
-                var resultIds2 = results2.Select(r => r.Document.Id);
-                var differences = resultIds1.Except(resultIds2);
-
-                if (differences.Count() > 0)
+                var scores2 = results2.Select(r => r.Document.Id); // r.Score.ToString());
+                
+                if (!scores2.SequenceEqual(scores1))
                 {
-                    Console.WriteLine($"{i} ERROR: {differences.Count()} differences");
+                    Console.WriteLine($"{i}. scores not equal");
+                    var r1 = scores1.ToArray();
+                    var r2 = scores2.ToArray();
+                    for(int i1=0; i1<r1.Length;i1++)
+                    {
+                        if(r1[i1]!=r2[i1]) Console.WriteLine($"  [{i1}]  {r1[i1]}  !=  {r2[i1]}");
+                    }
                 }
                 else
                 {
-                    Console.WriteLine($"{i} ok");
+                    Console.WriteLine($"{i}. scores equal");
                 }
             }
 
