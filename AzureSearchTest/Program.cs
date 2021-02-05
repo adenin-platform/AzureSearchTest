@@ -42,7 +42,7 @@ namespace AzureSearchTest
                     var r2 = scores2.ToArray();
                     for(int i1=0; i1<r1.Length;i1++)
                     {
-                        if(r1[i1]!=r2[i1]) Console.WriteLine($"  [{i1}]  {r1[i1]}  !=  {r2[i1]}");
+                        // if(r1[i1]!=r2[i1]) Console.WriteLine($"  [{i1}]  {r1[i1]}  !=  {r2[i1]}");
                     }
                 }
                 else
